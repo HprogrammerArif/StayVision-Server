@@ -154,7 +154,13 @@ async function run() {
     });
 
 
-
+// Get a single session data from db using _id
+app.get('/session/:id', async (req, res) => {
+  const id = req.params.id
+  const query = { _id: new ObjectId(id) }
+  const result = await studySessionCollection.findOne(query)
+  res.send(result)
+})
 
 
 
