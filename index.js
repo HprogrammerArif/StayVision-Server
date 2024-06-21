@@ -8,12 +8,11 @@ const jwt = require("jsonwebtoken");
 
 const port = process.env.PORT || 8000;
 
-
 // middleware
 const corsOptions = {
   origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
+    "http://localhost:5173",
+    "http://localhost:5174",
     // "stayvision-e5db4.web.app",
     // "stayvision-e5db4.firebaseapp.com",
   ],
@@ -42,7 +41,6 @@ const verifyToken = async (req, res, next) => {
   });
 };
 
-
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.epjsucj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@main.mq0mae1.mongodb.net/?retryWrites=true&w=majority&appName=Main`
@@ -55,18 +53,16 @@ const client = new MongoClient(uri, {
   },
 });
 
-
 async function run() {
   try {
-     // const db = client.db('stayvista')
+    // const db = client.db('stayvista')
     // const roomsCollection = db.collection('rooms')
     // const usersCollection = db.collection('users')
     // const bookingsCollection = db.collection('bookings')
 
-    const db = client.db('stayvision')
-    const studySessionCollection = db.collection('session')
-    const usersCollection = db.collection('users')
-
+    const db = client.db("stayvision");
+    const studySessionCollection = db.collection("session");
+    const usersCollection = db.collection("users");
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -82,7 +78,6 @@ async function run() {
         })
         .send({ success: true });
     });
-
 
     // Logout
     app.get("/logout", async (req, res) => {
@@ -100,18 +95,15 @@ async function run() {
       }
     });
 
-
-
     // save a user data in db
-    app.put('/user', async (req, res) => {
-      const user = req.body
+    app.put("/user", async (req, res) => {
+      const user = req.body;
       //console.log(user);
-      
-      const query = { email: user?.email }
-      // check if user already exists in db
-      const isExist = await usersCollection.findOne(query)
-      if (isExist) {
 
+      const query = { email: user?.email };
+      // check if user already exists in db
+      const isExist = await usersCollection.findOne(query);
+      if (isExist) {
         // if (user.status === 'Requested') {
         //   // if existing user try to change his role
         //   const result = await usersCollection.updateOne(query, {
@@ -123,18 +115,18 @@ async function run() {
         //   return res.send(isExist)
         // }
 
-        return res.send(isExist)
+        return res.send(isExist);
       }
 
       // save user for the first time
-      const options = { upsert: true }
+      const options = { upsert: true };
       const updateDoc = {
         $set: {
           ...user,
           timestamp: Date.now(),
         },
-      }
-      const result = await usersCollection.updateOne(query, updateDoc, options)
+      };
+      const result = await usersCollection.updateOne(query, updateDoc, options);
 
       // // welcome new user
       // sendEmail(user?.email, {
@@ -142,10 +134,8 @@ async function run() {
       //   message: `Hope you will find you destination`,
       // })
 
-
-      res.send(result)
-    })
-
+      res.send(result);
+    });
 
     // get all study session form db
     app.get("/session", async (req, res) => {
@@ -153,16 +143,27 @@ async function run() {
       res.send(result);
     });
 
+    // Get a single session data from db using _id
+    app.get("/session/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await studySessionCollection.findOne(query);
+      res.send(result);
+    });
 
-// Get a single session data from db using _id
-app.get('/session/:id', async (req, res) => {
-  const id = req.params.id
-  const query = { _id: new ObjectId(id) }
-  const result = await studySessionCollection.findOne(query)
-  res.send(result)
-})
+    // Get all tutor profile from db
+    app.get("/user", async (req, res) => {
+      //const category = req.query.category;
+      const role = req.query.role;
+      console.log(role);
+      let query = {};
+      if (role && role !== "null") query = { role: role};
+      const result = await usersCollection.find(query).toArray();
+      res.send(result);
+    });
 
 
+    // let query = { 'host.email': email }
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
@@ -174,11 +175,6 @@ app.get('/session/:id', async (req, res) => {
   }
 }
 run().catch(console.dir);
-
-
-
-
-
 
 app.get("/", (req, res) => {
   res.send("Hello from StayVista Server..");
