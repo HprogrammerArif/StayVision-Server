@@ -63,6 +63,8 @@ async function run() {
     const db = client.db("stayvision");
     const studySessionCollection = db.collection("session");
     const usersCollection = db.collection("users");
+    const cartCollection = db.collection("carts");
+    const reviewCollection= db.collection("reviews")
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -169,7 +171,37 @@ async function run() {
       res.send(result)
     })
 
-    // let query = { 'host.email': email }
+    // cart (order book) booking collection   
+    app.post("/carts", async (req, res) => {
+      const cartItem = req.body;
+      const result = await cartCollection.insertOne(cartItem);
+      res.send(result);
+    });
+
+    //get booking order
+     app.get("/carts", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await cartCollection.find(query).toArray();
+      res.send(result);
+    });
+
+     // Get a single cart data from db using _id
+     app.get('/carts/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await cartCollection.findOne(query)
+      res.send(result)
+    })
+
+
+    // collecting review and rating in reviewcollection   
+    app.post("/reviews", async (req, res) => {
+      const reviewItem = req.body;
+      const result = await reviewCollection.insertOne(reviewItem);
+      res.send(result);
+    });
+   
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
