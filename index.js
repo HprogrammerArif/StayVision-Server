@@ -65,6 +65,7 @@ async function run() {
     const usersCollection = db.collection("users");
     const cartCollection = db.collection("carts");
     const reviewCollection= db.collection("reviews")
+    const noteCollection= db.collection("notes")
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -201,6 +202,50 @@ async function run() {
       const result = await reviewCollection.insertOne(reviewItem);
       res.send(result);
     });
+
+    // saving notes data in noteCollection   
+    app.post("/notes", async (req, res) => {
+      const noteItems = req.body;
+      const result = await noteCollection.insertOne(noteItems);
+      res.send(result);
+    });
+
+      //get notes data from db in manageNotes route
+      app.get("/notes", async (req, res) => {
+        const email = req.query.email;
+        const query = { email: email };
+        const result = await noteCollection.find(query).toArray();
+        res.send(result);
+      });
+
+      //delete notes
+      app.delete("/notes/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await noteCollection.deleteOne(query);
+        res.send(result);
+      });
+
+       // Get a single notes data from db using _id
+     app.get('/note/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await noteCollection.findOne(query)
+      res.send(result)
+    })
+
+
+      // update notes data in db
+    app.put('/update-notes/:id', async (req, res) => {
+      const id = req.params.id
+      const roomData = req.body
+      const query = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: roomData,
+      }
+      const result = await noteCollection.updateOne(query, updateDoc)
+      res.send(result)
+    })
    
 
     // Send a ping to confirm a successful connection
