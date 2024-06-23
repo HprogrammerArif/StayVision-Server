@@ -247,6 +247,15 @@ async function run() {
       res.send(result)
     })
    
+    //TUTOR ROUTE
+    //add study session
+    app.post("/session", async (req, res) => {
+      const studySession = req.body;
+      const result = await studySessionCollection.insertOne(studySession);
+      res.send(result);
+    });
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
