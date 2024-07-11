@@ -13,8 +13,8 @@ const corsOptions = {
   origin: [
     "http://localhost:5173",
     "http://localhost:5174",
-    // "stayvision-e5db4.web.app",
-    // "stayvision-e5db4.firebaseapp.com",
+    // "https://stayvision-e5db4.web.app",
+    // "https://stayvision-e5db4.firebaseapp.com",
   ],
   credentials: true,
   optionSuccessStatus: 200,
@@ -64,8 +64,8 @@ async function run() {
     const studySessionCollection = db.collection("session");
     const usersCollection = db.collection("users");
     const cartCollection = db.collection("carts");
-    const reviewCollection= db.collection("reviews")
-    const noteCollection= db.collection("notes")
+    const reviewCollection = db.collection("reviews");
+    const noteCollection = db.collection("notes");
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -107,16 +107,16 @@ async function run() {
       // check if user already exists in db
       const isExist = await usersCollection.findOne(query);
       if (isExist) {
-        // if (user.status === 'Requested') {
-        //   // if existing user try to change his role
-        //   const result = await usersCollection.updateOne(query, {
-        //     $set: { status: user?.status },
-        //   })
-        //   return res.send(result)
-        // } else {
-        //   // if existing user login again
-        //   return res.send(isExist)
-        // }
+        if (user.status === 'Requested') {
+          // if existing user try to change his role
+          const result = await usersCollection.updateOne(query, {
+            $set: { status: user?.status },
+          })
+          return res.send(result)
+        } else {
+          // if existing user login again
+          return res.send(isExist)
+        }
 
         return res.send(isExist);
       }
@@ -140,6 +140,25 @@ async function run() {
       res.send(result);
     });
 
+     //get all users from db
+     app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+
+    //update a user role
+    app.patch('/users/update/:email', async (req, res) => {
+      const email = req.params.email
+      const user = req.body
+      const query = { email }
+      const updateDoc = {
+        $set: { ...user, timestamp: Date.now() },
+      }
+      const result = await usersCollection.updateOne(query, updateDoc)
+      res.send(result)
+    })
+    
+
     // get all study session form db
     app.get("/session", async (req, res) => {
       const result = await studySessionCollection.find().toArray();
@@ -160,19 +179,19 @@ async function run() {
       const role = req.query.role;
       console.log(role);
       let query = {};
-      if (role && role !== "null") query = { role: role};
+      if (role && role !== "null") query = { role: role };
       const result = await usersCollection.find(query).toArray();
       res.send(result);
     });
 
-     // get a user info by email from db
-     app.get('/user/:email', async (req, res) => {
-      const email = req.params.email
-      const result = await usersCollection.findOne({ email })
-      res.send(result)
-    })
+    // get a user info by email from db
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await usersCollection.findOne({ email });
+      res.send(result);
+    });
 
-    // cart (order book) booking collection   
+    // cart (order book) booking collection
     app.post("/carts", async (req, res) => {
       const cartItem = req.body;
       const result = await cartCollection.insertOne(cartItem);
@@ -180,73 +199,71 @@ async function run() {
     });
 
     //get booking order
-     app.get("/carts", async (req, res) => {
+    app.get("/carts", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const result = await cartCollection.find(query).toArray();
       res.send(result);
     });
 
-     // Get a single cart data from db using _id
-     app.get('/carts/:id', async (req, res) => {
-      const id = req.params.id
-      const query = { _id: new ObjectId(id) }
-      const result = await cartCollection.findOne(query)
-      res.send(result)
-    })
+    // Get a single cart data from db using _id
+    app.get("/carts/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await cartCollection.findOne(query);
+      res.send(result);
+    });
 
-
-    // collecting review and rating in reviewcollection   
+    // collecting review and rating in reviewcollection
     app.post("/reviews", async (req, res) => {
       const reviewItem = req.body;
       const result = await reviewCollection.insertOne(reviewItem);
       res.send(result);
     });
 
-    // saving notes data in noteCollection   
+    // saving notes data in noteCollection
     app.post("/notes", async (req, res) => {
       const noteItems = req.body;
       const result = await noteCollection.insertOne(noteItems);
       res.send(result);
     });
 
-      //get notes data from db in manageNotes route
-      app.get("/notes", async (req, res) => {
-        const email = req.query.email;
-        const query = { email: email };
-        const result = await noteCollection.find(query).toArray();
-        res.send(result);
-      });
+    //get notes data from db in manageNotes route
+    app.get("/notes", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await noteCollection.find(query).toArray();
+      res.send(result);
+    });
 
-      //delete notes
-      app.delete("/notes/:id", async (req, res) => {
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
-        const result = await noteCollection.deleteOne(query);
-        res.send(result);
-      });
+    //delete notes
+    app.delete("/notes/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await noteCollection.deleteOne(query);
+      res.send(result);
+    });
 
-       // Get a single notes data from db using _id
-     app.get('/note/:id', async (req, res) => {
-      const id = req.params.id
-      const query = { _id: new ObjectId(id) }
-      const result = await noteCollection.findOne(query)
-      res.send(result)
-    })
+    // Get a single notes data from db using _id
+    app.get("/note/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await noteCollection.findOne(query);
+      res.send(result);
+    });
 
-
-      // update notes data in db
-    app.put('/update-notes/:id', async (req, res) => {
-      const id = req.params.id
-      const roomData = req.body
-      const query = { _id: new ObjectId(id) }
+    // update notes data in db
+    app.put("/update-notes/:id", async (req, res) => {
+      const id = req.params.id;
+      const roomData = req.body;
+      const query = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: roomData,
-      }
-      const result = await noteCollection.updateOne(query, updateDoc)
-      res.send(result)
-    })
-   
+      };
+      const result = await noteCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
     //TUTOR ROUTE
     //add study session
     app.post("/session", async (req, res) => {
@@ -255,10 +272,8 @@ async function run() {
       res.send(result);
     });
 
-
-
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
