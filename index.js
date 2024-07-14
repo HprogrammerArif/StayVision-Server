@@ -67,20 +67,57 @@ async function run() {
     const reviewCollection = db.collection("reviews");
     const noteCollection = db.collection("notes");
 
+
+    
     // auth related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
+      console.log(user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "365d",
       });
+      console.log(token, "in baxj");
       res
         .cookie("token", token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
-        .send({ success: true });
+        .send({ token });
     });
+
+
+     //middlewares
+     const verifyToken = async (req, res, next) => {
+      console.log("inside verify token", req.headers.authorization);
+
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "Unauthorized access" });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: "Unauthorized access" });
+        }
+        req.decoded = decoded;
+        next();
+      });
+    };
+
+    //use verify admin after verifyToken
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
+
+
 
     // Logout
     app.get("/logout", async (req, res) => {
