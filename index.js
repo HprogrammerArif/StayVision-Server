@@ -5,6 +5,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const port = process.env.PORT || 8000;
 
@@ -63,9 +64,10 @@ async function run() {
     const db = client.db("stayvision");
     const studySessionCollection = db.collection("session");
     const usersCollection = db.collection("users");
-    const cartCollection = db.collection("carts");
+    //const cartCollection = db.collection("carts");
     const reviewCollection = db.collection("reviews");
     const noteCollection = db.collection("notes");
+    const bookingsCollection = db.collection("bookings");
 
 
     
@@ -76,7 +78,7 @@ async function run() {
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "365d",
       });
-      console.log(token, "in baxj");
+      //console.log(token, "in baxj");
       res
         .cookie("token", token, {
           httpOnly: true,
@@ -108,15 +110,13 @@ async function run() {
     const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
       query = { email: email };
-      const user = await userCollection.findOne(query);
+      const user = await usersCollection.findOne(query);
       const isAdmin = user?.role === "admin";
       if (!isAdmin) {
         res.status(403).send({ message: "forbidden access" });
       }
       next();
     };
-
-
 
 
     // Logout
@@ -134,6 +134,31 @@ async function run() {
         res.status(500).send(err);
       }
     });
+
+
+    //create-payment-intent
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
+      const price = req.body.price;
+      const priceInCent = parseFloat(price) * 100;
+
+      if (!price || priceInCent < 1) return;
+
+      //Generat client secret
+      const { client_secret } = await stripe.paymentIntents.create({
+        amount: priceInCent,
+        currency: "usd",
+        // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+
+      //send client secret as a token
+      res.send({
+        clientSecret: client_secret,
+      });
+    });
+
 
     // save a user data in db
     app.put("/user", async (req, res) => {
@@ -177,8 +202,9 @@ async function run() {
       res.send(result);
     });
 
+
      //get all users from db
-     app.get("/users", async (req, res) => {
+     app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -308,6 +334,27 @@ async function run() {
       const result = await studySessionCollection.insertOne(studySession);
       res.send(result);
     });
+
+
+    //save a booking data in db
+    app.post("/booking", verifyToken, async (req, res) => {
+      const bookingData = req.body;
+      //save room booking info
+      const result = await bookingsCollection.insertOne(bookingData);
+
+      //change avaiblity status
+      const sessionId = bookingData?.sessionId;
+      const query = { _id: new ObjectId(sessionId) };
+      const updateDoc = {
+        $set: { booked: true },
+      };
+
+      const updatedRoom = await studySessionCollection.updateOne(query, updateDoc);
+      console.log(updatedRoom);
+      
+      res.send({result, updatedRoom});
+    });
+
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
