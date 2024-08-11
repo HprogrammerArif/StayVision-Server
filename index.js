@@ -203,12 +203,6 @@ async function run() {
     });
 
 
-     //get all users from db
-     app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
-      const result = await usersCollection.find().toArray();
-      res.send(result);
-    });
-
     //update a user role
     app.patch('/users/update/:email', async (req, res) => {
       const email = req.params.email
@@ -247,6 +241,7 @@ async function run() {
       res.send(result);
     });
 
+
     // get a user info by email from db
     app.get("/user/:email", async (req, res) => {
       const email = req.params.email;
@@ -269,11 +264,11 @@ async function run() {
       res.send(result);
     });
 
-    // Get a single cart data from db using _id
-    app.get("/carts/:id", async (req, res) => {
+    // Get a single bookings details data from db using _id
+    app.get("/bookings/details/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await cartCollection.findOne(query);
+      const result = await bookingsCollection.findOne(query);
       res.send(result);
     });
 
@@ -342,18 +337,89 @@ async function run() {
       //save room booking info
       const result = await bookingsCollection.insertOne(bookingData);
 
-      //change avaiblity status
-      const sessionId = bookingData?.sessionId;
-      const query = { _id: new ObjectId(sessionId) };
-      const updateDoc = {
-        $set: { booked: true },
-      };
+      // //change avaiblity status
+      // const sessionId = bookingData?.sessionId;
+      // const query = { _id: new ObjectId(sessionId) };
+      // const updateDoc = {
+      //   $set: { booked: true },
+      // };
 
-      const updatedRoom = await studySessionCollection.updateOne(query, updateDoc);
-      console.log(updatedRoom);
+      // const updatedRoom = await studySessionCollection.updateOne(query, updateDoc);
+      // console.log(updatedRoom);
       
-      res.send({result, updatedRoom});
+      res.send(result);
     });
+
+    //Update booking session status
+    app.patch("/session/status/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.body.status;
+      //change avaiblity status
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: { booked: status },
+      };
+      const result = await studySessionCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+    //get all booking for a student
+    app.get("/myBooking/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { "student.email": email };
+      const result = await bookingsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+
+
+    // //get all users from db
+    // app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
+    //   const result = await usersCollection.find().toArray();
+    //   res.send(result);
+    // });
+
+
+    // Get all jobs data from db for pagination
+    app.get('/all-users', async (req, res) => {
+      const size = parseInt(req.query.size)
+      const page = parseInt(req.query.page) - 1
+      const filter = req.query.filter
+      const sort = req.query.sort
+      const search = req.query.search
+      console.log(size, page, filter, sort)
+
+      let query = {
+        email: { $regex: search, $options: 'i' },
+      }
+      if (filter) query.role = filter
+      let options = {}
+      if (sort) options = { sort: { timestamp: sort === 'asc' ? 1 : -1 } }
+      const result = await usersCollection
+        .find(query, options)
+        .skip(page * size)
+        .limit(size)
+        .toArray()
+
+      res.send(result)
+    })
+
+
+    // Get all jobs data count from db
+    app.get('/users-count', async (req, res) => {
+      const filter = req.query.filter
+      const search = req.query.search
+      let query = {
+        email: { $regex: search, $options: 'i' },
+      }
+      if (filter) query.role = filter
+      
+      console.log(query, filter);
+      const count = await usersCollection.countDocuments(query)
+      //const count = await usersCollection.countDocuments()
+
+      res.send({ count })
+    })
 
 
     // Send a ping to confirm a successful connection
