@@ -69,8 +69,6 @@ async function run() {
     const noteCollection = db.collection("notes");
     const bookingsCollection = db.collection("bookings");
 
-
-    
     // auth related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -88,9 +86,8 @@ async function run() {
         .send({ token });
     });
 
-
-     //middlewares
-     const verifyToken = async (req, res, next) => {
+    //middlewares
+    const verifyToken = async (req, res, next) => {
       console.log("inside verify token", req.headers.authorization);
 
       if (!req.headers.authorization) {
@@ -118,7 +115,6 @@ async function run() {
       next();
     };
 
-
     // Logout
     app.get("/logout", async (req, res) => {
       try {
@@ -134,7 +130,6 @@ async function run() {
         res.status(500).send(err);
       }
     });
-
 
     //create-payment-intent
     app.post("/create-payment-intent", verifyToken, async (req, res) => {
@@ -159,7 +154,6 @@ async function run() {
       });
     });
 
-
     // save a user data in db
     app.put("/user", async (req, res) => {
       const user = req.body;
@@ -169,15 +163,15 @@ async function run() {
       // check if user already exists in db
       const isExist = await usersCollection.findOne(query);
       if (isExist) {
-        if (user.status === 'Requested') {
+        if (user.status === "Requested") {
           // if existing user try to change his role
           const result = await usersCollection.updateOne(query, {
             $set: { status: user?.status },
-          })
-          return res.send(result)
+          });
+          return res.send(result);
         } else {
           // if existing user login again
-          return res.send(isExist)
+          return res.send(isExist);
         }
 
         return res.send(isExist);
@@ -202,24 +196,81 @@ async function run() {
       res.send(result);
     });
 
-
     //update a user role
-    app.patch('/users/update/:email', async (req, res) => {
-      const email = req.params.email
-      const user = req.body
-      const query = { email }
+    app.patch("/users/update/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const query = { email };
       const updateDoc = {
         $set: { ...user, timestamp: Date.now() },
-      }
-      const result = await usersCollection.updateOne(query, updateDoc)
-      res.send(result)
-    })
-    
-
-    // get all study session form db
-    app.get("/session", async (req, res) => {
-      const result = await studySessionCollection.find().toArray();
+      };
+      const result = await usersCollection.updateOne(query, updateDoc);
       res.send(result);
+    });
+
+    // // get all study session form db
+    // app.get("/all-sessions", async (req, res) => {
+    //   const result = await studySessionCollection.find().toArray();
+    //   res.send(result);
+    // });
+
+    // Get all jobs data from db for pagination
+    app.get("/all-sessions", async (req, res) => {
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
+      const filter = req.query.filter;
+      const sort = req.query.sort;
+      let search = req.query.search;
+      console.log(size, page, filter,search, sort);
+
+      if (typeof search !== "string") {
+        search = ""; // Set to an empty string if not provided or not a string
+      }
+
+      let query = {
+        title: { $regex: search, $options: "i" },
+      };
+
+
+      // Get current date and format it as 'YYYY-MM-DD'
+      const currentDate = new Date().toISOString().split("T")[0];
+      //console.log("Current Date:", currentDate);
+
+      if (filter && filter === "ongoing") {
+        query.registration_end_date = { $gt: currentDate };
+      }
+
+      if (filter && filter === "closed") {
+        query.registration_end_date = { $lte: currentDate };
+      }
+
+
+
+      let options = {};
+      if (sort) options = { sort: { registration_fee: sort === "dsc" ? 1 : -1 } };
+      const result = await studySessionCollection
+        .find(query, options)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+
+      res.send(result);
+    });
+
+    // Get all jobs data count from db
+    app.get("/all-sessions-count", async (req, res) => {
+      const filter = req.query.filter;
+      const search = req.query.search;
+      let query = {
+        title: { $regex: search, $options: "i" },
+      };
+      //if (filter) query.role = filter;
+
+      //console.log(query, search, filter);
+      //const count = await studySessionCollection.countDocuments(query);
+      const count = await studySessionCollection.countDocuments();
+
+      res.send({ count });
     });
 
     // Get a single session data from db using _id
@@ -240,7 +291,6 @@ async function run() {
       const result = await usersCollection.find(query).toArray();
       res.send(result);
     });
-
 
     // get a user info by email from db
     app.get("/user/:email", async (req, res) => {
@@ -330,7 +380,6 @@ async function run() {
       res.send(result);
     });
 
-
     //save a booking data in db
     app.post("/booking", verifyToken, async (req, res) => {
       const bookingData = req.body;
@@ -346,7 +395,7 @@ async function run() {
 
       // const updatedRoom = await studySessionCollection.updateOne(query, updateDoc);
       // console.log(updatedRoom);
-      
+
       res.send(result);
     });
 
@@ -371,56 +420,51 @@ async function run() {
       res.send(result);
     });
 
-
-
     // //get all users from db
     // app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
     //   const result = await usersCollection.find().toArray();
     //   res.send(result);
     // });
 
-
     // Get all jobs data from db for pagination
-    app.get('/all-users', async (req, res) => {
-      const size = parseInt(req.query.size)
-      const page = parseInt(req.query.page) - 1
-      const filter = req.query.filter
-      const sort = req.query.sort
-      const search = req.query.search
-      console.log(size, page, filter, sort)
+    app.get("/all-users", async (req, res) => {
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
+      const filter = req.query.filter;
+      const sort = req.query.sort;
+      const search = req.query.search;
+      console.log(size, page, filter, sort);
 
       let query = {
-        email: { $regex: search, $options: 'i' },
-      }
-      if (filter) query.role = filter
-      let options = {}
-      if (sort) options = { sort: { timestamp: sort === 'asc' ? 1 : -1 } }
+        email: { $regex: search, $options: "i" },
+      };
+      if (filter) query.role = filter;
+      let options = {};
+      if (sort) options = { sort: { timestamp: sort === "asc" ? 1 : -1 } };
       const result = await usersCollection
         .find(query, options)
         .skip(page * size)
         .limit(size)
-        .toArray()
+        .toArray();
 
-      res.send(result)
-    })
-
+      res.send(result);
+    });
 
     // Get all jobs data count from db
-    app.get('/users-count', async (req, res) => {
-      const filter = req.query.filter
-      const search = req.query.search
+    app.get("/users-count", async (req, res) => {
+      const filter = req.query.filter;
+      const search = req.query.search;
       let query = {
-        email: { $regex: search, $options: 'i' },
-      }
-      if (filter) query.role = filter
-      
+        email: { $regex: search, $options: "i" },
+      };
+      if (filter) query.role = filter;
+
       console.log(query, filter);
-      const count = await usersCollection.countDocuments(query)
+      const count = await usersCollection.countDocuments(query);
       //const count = await usersCollection.countDocuments()
 
-      res.send({ count })
-    })
-
+      res.send({ count });
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
