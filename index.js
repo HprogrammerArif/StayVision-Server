@@ -273,13 +273,7 @@ async function run() {
       res.send({ count });
     });
 
-    // Get a single session data from db using _id
-    app.get("/session/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await studySessionCollection.findOne(query);
-      res.send(result);
-    });
+    
 
     // Get all (user) tutor profile from db
     app.get("/user", async (req, res) => {
@@ -380,6 +374,51 @@ async function run() {
       res.send(result);
     });
 
+    // Get a single session data from db using _id
+    app.get("/session/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await studySessionCollection.findOne(query);
+      res.send(result);
+    });
+
+    // get all session posted by a specific user
+    app.get('/sessions/:email', verifyToken, async (req, res) => {
+      //const tokenEmail = req.user.email
+      const email = req.params.email
+      // if (tokenEmail !== email) {
+      //   return res.status(403).send({ message: 'forbidden access' })
+      // }
+      const query = { tutor_email: email }
+      const result = await studySessionCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // delete a job data from db
+    app.delete('/session/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await studySessionCollection.deleteOne(query)
+      res.send(result)
+    })
+
+    // update a job in db
+    app.put('/session/:id', async (req, res) => {
+      const id = req.params.id
+      const newStudySession = req.body
+      const query = { _id: new ObjectId(id) }
+      const options = { upsert: true }
+      const updateDoc = {
+        $set: {
+          ...newStudySession,
+        },
+      }
+      const result = await studySessionCollection.updateOne(query, updateDoc, options)
+      res.send(result)
+    })
+
+    
+
     //save a booking data in db
     app.post("/booking", verifyToken, async (req, res) => {
       const bookingData = req.body;
@@ -413,7 +452,7 @@ async function run() {
     });
 
     //get all booking for a student
-    app.get("/myBooking/:email", verifyToken, async (req, res) => {
+    app.get("/myBooking/:email", async (req, res) => {
       const email = req.params.email;
       const query = { "student.email": email };
       const result = await bookingsCollection.find(query).toArray();
