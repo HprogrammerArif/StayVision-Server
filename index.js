@@ -221,7 +221,7 @@ async function run() {
       const filter = req.query.filter;
       const sort = req.query.sort;
       let search = req.query.search;
-      console.log(size, page, filter,search, sort);
+      console.log(size, page, filter, search, sort);
 
       if (typeof search !== "string") {
         search = ""; // Set to an empty string if not provided or not a string
@@ -230,7 +230,6 @@ async function run() {
       let query = {
         title: { $regex: search, $options: "i" },
       };
-
 
       // Get current date and format it as 'YYYY-MM-DD'
       const currentDate = new Date().toISOString().split("T")[0];
@@ -244,10 +243,9 @@ async function run() {
         query.registration_end_date = { $lte: currentDate };
       }
 
-
-
       let options = {};
-      if (sort) options = { sort: { registration_fee: sort === "dsc" ? 1 : -1 } };
+      if (sort)
+        options = { sort: { registration_fee: sort === "dsc" ? 1 : -1 } };
       const result = await studySessionCollection
         .find(query, options)
         .skip(page * size)
@@ -272,8 +270,6 @@ async function run() {
 
       res.send({ count });
     });
-
-    
 
     // Get all (user) tutor profile from db
     app.get("/user", async (req, res) => {
@@ -382,42 +378,70 @@ async function run() {
       res.send(result);
     });
 
-    // get all session posted by a specific user
-    app.get('/sessions/:email', verifyToken, async (req, res) => {
-      //const tokenEmail = req.user.email
-      const email = req.params.email
-      // if (tokenEmail !== email) {
-      //   return res.status(403).send({ message: 'forbidden access' })
-      // }
-      const query = { tutor_email: email }
-      const result = await studySessionCollection.find(query).toArray()
-      res.send(result)
-    })
+    // get all session posted by a specific user by email from db
+    app.get("/sessions/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { tutor_email: email };
+      const result = await studySessionCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // get all session for admin for approve and delete
+    //verifyToken, 
+    app.get("/all-session", async (req, res) => {
+      const result = await studySessionCollection.find().toArray();
+      res.send(result);
+    });
+
+
+    // //Get all bid requests from db for job owner
+    // app.get("/bid-requests/:email", verifyToken, async (req, res) => {
+    //   const email = req.params.email;
+    //   const query = { "buyer.email": email };
+    //   const result = await bidsCollection.find(query).toArray();
+    //   res.send(result);
+    // });
+
+    // Update Bid status
+    app.patch("/session/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: status,
+      };
+      const result = await studySessionCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+
 
     // delete a job data from db
-    app.delete('/session/:id', async (req, res) => {
-      const id = req.params.id
-      const query = { _id: new ObjectId(id) }
-      const result = await studySessionCollection.deleteOne(query)
-      res.send(result)
-    })
+    app.delete("/session/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await studySessionCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // update a job in db
-    app.put('/session/:id', async (req, res) => {
-      const id = req.params.id
-      const newStudySession = req.body
-      const query = { _id: new ObjectId(id) }
-      const options = { upsert: true }
+    app.put("/session/:id", async (req, res) => {
+      const id = req.params.id;
+      const newStudySession = req.body;
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
       const updateDoc = {
         $set: {
           ...newStudySession,
         },
-      }
-      const result = await studySessionCollection.updateOne(query, updateDoc, options)
-      res.send(result)
-    })
-
-    
+      };
+      const result = await studySessionCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
 
     //save a booking data in db
     app.post("/booking", verifyToken, async (req, res) => {
