@@ -68,6 +68,7 @@ async function run() {
     const reviewCollection = db.collection("reviews");
     const noteCollection = db.collection("notes");
     const bookingsCollection = db.collection("bookings");
+    const rejectedSessionFeedbackCollection = db.collection("rejectedFeedback");
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -411,6 +412,33 @@ async function run() {
         $set: status,
       };
       const result = await studySessionCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+    
+     //Provide feedback for rejected session
+     app.post("/rejected-feedback", async (req, res) => {
+      const rejectedSession = req.body;
+      console.log(rejectedSession);
+      const result = await rejectedSessionFeedbackCollection.insertOne(rejectedSession);
+      res.send(result);
+    });
+
+    //get all 
+    app.get("/rejectFeedback/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const result = await rejectedSessionFeedbackCollection.find(query).toArray();
+      res.send(result);
+    });
+
+
+    // Get a single rejected details from db using _id
+    app.get("/rejectDetails/:id", async (req, res) => {
+      //const rejectedData = req.body;
+      const id = req.params.id;
+      const query = { rejectdeId: id };
+      const result = await rejectedSessionFeedbackCollection.findOne(query);
       res.send(result);
     });
 
