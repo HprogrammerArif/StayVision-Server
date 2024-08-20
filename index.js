@@ -69,6 +69,7 @@ async function run() {
     const noteCollection = db.collection("notes");
     const bookingsCollection = db.collection("bookings");
     const rejectedSessionFeedbackCollection = db.collection("rejectedFeedback");
+    const uploadMaterialsCollection = db.collection("materials");
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -441,6 +442,26 @@ async function run() {
       const result = await rejectedSessionFeedbackCollection.findOne(query);
       res.send(result);
     });
+
+    // Get a single details for upload meterials route from db using _id
+    app.get("/uploadDetails/:id", async (req, res) => {
+      //const rejectedData = req.body;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await studySessionCollection.findOne(query);
+      res.send(result);
+    });
+
+    // upload-materials
+    //Upload Materials for Approved Study Session
+    app.post("/upload-materials", async (req, res) => {
+      const uploadMaterials = req.body;
+      console.log(uploadMaterials);
+      const result = await uploadMaterialsCollection.insertOne(uploadMaterials);
+      res.send(result);
+    });
+
+
 
 
 
