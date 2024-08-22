@@ -389,12 +389,11 @@ async function run() {
     });
 
     // get all session for admin for approve and delete
-    //verifyToken, 
+    //verifyToken,
     app.get("/all-session", async (req, res) => {
       const result = await studySessionCollection.find().toArray();
       res.send(result);
     });
-
 
     // //Get all bid requests from db for job owner
     // app.get("/bid-requests/:email", verifyToken, async (req, res) => {
@@ -416,23 +415,25 @@ async function run() {
       res.send(result);
     });
 
-    
-     //Provide feedback for rejected session
-     app.post("/rejected-feedback", async (req, res) => {
+    //Provide feedback for rejected session
+    app.post("/rejected-feedback", async (req, res) => {
       const rejectedSession = req.body;
       console.log(rejectedSession);
-      const result = await rejectedSessionFeedbackCollection.insertOne(rejectedSession);
+      const result = await rejectedSessionFeedbackCollection.insertOne(
+        rejectedSession
+      );
       res.send(result);
     });
 
-    //get all 
+    //get all
     app.get("/rejectFeedback/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email };
-      const result = await rejectedSessionFeedbackCollection.find(query).toArray();
+      const result = await rejectedSessionFeedbackCollection
+        .find(query)
+        .toArray();
       res.send(result);
     });
-
 
     // Get a single rejected details from db using _id
     app.get("/rejectDetails/:id", async (req, res) => {
@@ -461,9 +462,67 @@ async function run() {
       res.send(result);
     });
 
+    // Get a single details for update meterials route from db using _id
+    app.get("/updateMaterials/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { materialId: id };
+      const result = await uploadMaterialsCollection.findOne(query);
+      res.send(result);
+    });
 
 
 
+    // Get booked meterials for student from db using _id
+    app.get("/view-booked-materials/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log("id of wiew booked =>",id);
+      const query = { materialId: id };
+      const result = await uploadMaterialsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+
+
+    // get all materials for specific tutor by email from db
+    app.get("/materials/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await uploadMaterialsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // view all materials for admin
+    app.get("/view-all-materials", verifyToken, async (req, res) => {
+      const result = await uploadMaterialsCollection.find().toArray();
+      res.send(result);
+    });
+
+    // update a materials in db
+    app.put("/update-materials/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateMaterials = req.body;
+      const query = { materialId: id };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          ...updateMaterials,
+        },
+      };
+      const result = await uploadMaterialsCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    // delete a materials data from db by tutor
+    app.delete("/materials/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { materialId: id };
+      const result = await uploadMaterialsCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // delete a job data from db
     app.delete("/session/:id", async (req, res) => {
