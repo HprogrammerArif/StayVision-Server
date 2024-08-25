@@ -7,7 +7,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 9000;
 
 // middleware
 const corsOptions = {
@@ -390,7 +390,7 @@ async function run() {
 
     // get all session for admin for approve and delete
     //verifyToken,
-    app.get("/all-session", async (req, res) => {
+    app.get("/all-session", verifyToken, async (req, res) => {
       const result = await studySessionCollection.find().toArray();
       res.send(result);
     });
