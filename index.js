@@ -12,10 +12,10 @@ const port = process.env.PORT || 9000;
 // middleware
 const corsOptions = {
   origin: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    // "https://stayvision-e5db4.web.app",
-    // "https://stayvision-e5db4.firebaseapp.com",
+    // "http://localhost:5173",
+    // "http://localhost:5174",
+    "https://stayvision-e5db4.web.app",
+    "https://stayvision-e5db4.firebaseapp.com",
   ],
   credentials: true,
   optionSuccessStatus: 200,
