@@ -12,10 +12,10 @@ const port = process.env.PORT || 9000;
 // middleware
 const corsOptions = {
   origin: [
-    // "http://localhost:5173",
-    // "http://localhost:5174",
-    "https://stayvision-e5db4.web.app",
-    "https://stayvision-e5db4.firebaseapp.com",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    // "https://stayvision-e5db4.web.app",
+    //"https://stayvision-e5db4.firebaseapp.com",
   ],
   credentials: true,
   optionSuccessStatus: 200,
@@ -470,18 +470,14 @@ async function run() {
       res.send(result);
     });
 
-
-
     // Get booked meterials for student from db using _id
     app.get("/view-booked-materials/:id", async (req, res) => {
       const id = req.params.id;
-      console.log("id of wiew booked =>",id);
+      console.log("id of wiew booked =>", id);
       const query = { materialId: id };
       const result = await uploadMaterialsCollection.find(query).toArray();
       res.send(result);
     });
-
-
 
     // get all materials for specific tutor by email from db
     app.get("/materials/:email", verifyToken, async (req, res) => {
@@ -636,6 +632,56 @@ async function run() {
 
       res.send({ count });
     });
+
+    //FOR STATISTICS
+    //ADMIN STATISTICS
+    app.get("/admin-stat", async (req, res) => {
+      const bookingDetails = await bookingsCollection
+        .find(
+          {},
+          {
+            projection: {
+              date: 1,
+              price: 1,
+            },
+          }
+        )
+        .toArray();
+
+      const totalStudent = await usersCollection.countDocuments({ role: "student" });
+      const totalSession = await studySessionCollection.countDocuments();
+      const totalPrice = bookingDetails.reduce(
+        (sum, booking) => sum + parseFloat(booking.price || 0), // Convert price to number, default to 0 if it's invalid
+        0
+      );
+
+      // const data = [
+      //   ['Day', 'Sales'],
+      //   ['9', 1000],
+      //   ['10', 1170],
+      //   ['11/3', 660],
+      //   ['12/1', 1030],
+      // ]
+      const chartData = bookingDetails.map(booking => {
+        const day = new Date(booking.date).getDate()
+        const month = new Date(booking.date).getMonth() +1
+        const data = [`${day}/${month}`, booking?.price]
+        return data
+      })
+      chartData.unshift(['Day', 'Sales'])
+      //chartData.splice(0,0,['Day', 'Sales'])
+       
+      res.send({
+        bookingDetails,
+        totalStudent,
+        totalSession,
+        totalBookings: bookingDetails.length,
+        totalPrice,
+        chartData
+      });
+    });
+
+
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
