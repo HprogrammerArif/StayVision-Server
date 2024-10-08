@@ -117,6 +117,30 @@ async function run() {
       next();
     };
 
+    //use verify tutor after verifyToken
+    const verifyTutor = async (req, res, next) => {
+      const email = req.decoded.email;
+      query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const isTutor = user?.role === "tutor";
+      if (!isTutor) {
+        res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
+    //use verify student after verifyToken
+    const verifyStudent = async (req, res, next) => {
+      const email = req.decoded.email;
+      query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const isStudent = user?.role === "student";
+      if (!isStudent) {
+        res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
     // Logout
     app.get("/logout", async (req, res) => {
       try {
@@ -635,7 +659,7 @@ async function run() {
 
     //FOR STATISTICS
     //ADMIN STATISTICS
-    app.get("/admin-stat", async (req, res) => {
+    app.get("/admin-stat", verifyToken, verifyAdmin, async (req, res) => {
       const bookingDetails = await bookingsCollection
         .find(
           {},
@@ -648,7 +672,9 @@ async function run() {
         )
         .toArray();
 
-      const totalStudent = await usersCollection.countDocuments({ role: "student" });
+      const totalStudent = await usersCollection.countDocuments({
+        role: "student",
+      });
       const totalSession = await studySessionCollection.countDocuments();
       const totalPrice = bookingDetails.reduce(
         (sum, booking) => sum + parseFloat(booking.price || 0), // Convert price to number, default to 0 if it's invalid
@@ -662,26 +688,114 @@ async function run() {
       //   ['11/3', 660],
       //   ['12/1', 1030],
       // ]
-      const chartData = bookingDetails.map(booking => {
-        const day = new Date(booking.date).getDate()
-        const month = new Date(booking.date).getMonth() +1
-        const data = [`${day}/${month}`, booking?.price]
-        return data
-      })
-      chartData.unshift(['Day', 'Sales'])
+      const chartData = bookingDetails.map((booking) => {
+        const day = new Date(booking.date).getDate();
+        const month = new Date(booking.date).getMonth() + 1;
+        const data = [`${day}/${month}`, Number(booking?.price || 0)];
+        return data;
+      });
+      chartData.unshift(["Day", "Sales"]);
       //chartData.splice(0,0,['Day', 'Sales'])
-       
+
       res.send({
         bookingDetails,
         totalStudent,
         totalSession,
         totalBookings: bookingDetails.length,
         totalPrice,
-        chartData
+        chartData,
       });
     });
 
+    //TUTOR STATISTICS
+    app.get("/tutor-stat", verifyToken, verifyTutor, async (req, res) => {
+      const { email } = req.decoded;
+      const bookingDetails = await bookingsCollection
+        .find(
+          {
+            tutor_email: email,
+          },
+          {
+            projection: {
+              date: 1,
+              price: 1,
+            },
+          }
+        )
+        .toArray();
 
+      const totalSession = await studySessionCollection.countDocuments({
+        tutor_email: email,
+      });
+      const totalPrice = bookingDetails.reduce(
+        (sum, booking) => sum + parseFloat(booking.price || 0), // Convert price to number, default to 0 if it's invalid
+        0
+      );
+      const { timestamp } = await usersCollection.findOne(
+        { email },
+        { projection: { timestamp: 1 } }
+      );
+
+      const chartData = bookingDetails.map((booking) => {
+        const day = new Date(booking.date).getDate();
+        const month = new Date(booking.date).getMonth() + 1;
+        const data = [`${day}/${month}`, Number(booking?.price || 0)];
+        return data;
+      });
+      chartData.unshift(["Day", "Sales"]);
+      //chartData.splice(0,0,['Day', 'Sales'])
+
+      res.send({
+        totalSession,
+        totalBookings: bookingDetails.length,
+        totalPrice,
+        chartData,
+        TutorSince: timestamp,
+      });
+    });
+
+    //STUDENT STATISTICS
+    app.get("/student-stat", verifyToken, verifyStudent, async (req, res) => {
+      const { email } = req.decoded;
+      const bookingDetails = await bookingsCollection
+        .find(
+          {
+            "student.email": email,
+          },
+          {
+            projection: {
+              date: 1,
+              price: 1,
+            },
+          }
+        )
+        .toArray();
+
+      const totalPrice = bookingDetails.reduce(
+        (sum, booking) => sum + parseFloat(booking.price || 0), // Convert price to number, default to 0 if it's invalid
+        0
+      );
+      const { timestamp } = await usersCollection.findOne(
+        { email },
+        { projection: { timestamp: 1 } }
+      );
+
+      const chartData = bookingDetails.map((booking) => {
+        const day = new Date(booking.date).getDate();
+        const month = new Date(booking.date).getMonth() + 1;
+        const data = [`${day}/${month}`, Number(booking?.price || 0)];
+        return data;
+      });
+      chartData.unshift(["Day", "Sales"]);
+      //chartData.splice(0,0,['Day', 'Sales'])
+
+      res.send({
+        totalPrice,
+        totalBookings: bookingDetails.length,
+        StudentSince: timestamp,
+        chartData,
+      });
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
